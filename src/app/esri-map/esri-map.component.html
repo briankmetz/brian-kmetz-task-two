@@ -1,0 +1,13 @@
+<div class="dropdown">
+  <button class="dropbtn">Menu</button>
+  <div class="dropdown-content">
+    <a href="#" (click)='addOrRemoveLayer($event, 0)'><img src='../../assets/outline_icon.png' /> <span class='outline-button'> US Outline </span></a>
+    <a href="#" (click)='addOrRemoveLayer($event, 1)'><img src='../../assets/states_icon.png' /> <span class='states-button'> States </span></a>
+    <a href="#" (click)='addOrRemoveLayer($event, 2)'><img src='../../assets/counties_icon.png' /> <span class='counties-button'> Counties </span></a>
+    <a href="#" (click)='addOrRemoveLayer($event, 3)'><img src='../../assets/capitol_icon.png' /> <span class='congressional-button'> Districts </span></a>
+  </div>
+</div>
+
+<div #mapViewNode></div>
+
+<!-- <input type="checkbox" ng-click="myFunc()"> &nbsp;  -->
