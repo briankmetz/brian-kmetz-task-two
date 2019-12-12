@@ -16,12 +16,13 @@ export class EsriMapComponent implements AfterViewInit {
 
 	@ViewChild('mapViewNode', {static: false}) private mapViewEl: ElementRef;
 	
-  constructor() { }
+  constructor(private http: HttpClient) { }
 
   ngAfterViewInit() {
   	loadModules([
       'esri/Map',
       'esri/Color',
+      'esri/PopupTemplate',
       'esri/views/MapView',
       'esri/layers/GeoJSONLayer',
       'esri/renderers/SimpleRenderer',
@@ -31,12 +32,47 @@ export class EsriMapComponent implements AfterViewInit {
       .then(([
       	EsriMap, 
       	EsriColor,
+      	EsriPopupTemplate,
       	EsriMapView, 
       	EsriGeoJSONLayer, 
       	EsriSimpleRenderer,
       	EsriSimpleLineSymbol, 
       	EsriSimpleFillSymbol
       ]) => {
+      	
+      	var http_client = this.http;
+    		var base_url = 'https://api.census.gov/data/2013/language?get=LAN7,LANLABEL&EST=0:1000000000'
+      	var getApiData = function(target) {
+		      // generate url depending on if this feature is a state or county
+		      let url;
+		      if(target.graphic.attributes.COUNTY)
+		        url = base_url + '&for=county:' + target.graphic.attributes.COUNTY + '&in=state:' + target.graphic.attributes.STATE + '&key=691994fbcdf058cfe7236db1e35f507ad5dd22ba';
+		      else
+		        url = base_url + '&for=state:' + target.graphic.attributes.STATE + '&key=691994fbcdf058cfe7236db1e35f507ad5dd22ba';
+		      
+		      // promisify API call and then return promised content
+		      const promise = http_client.get(url).toPromise();
+		      return promise.then((data: any[]) => {
+		      	console.log(data)
+		          if(!data){
+		            return '<p><b>Data Unavailable</b><br>This likely occured because tabulations are only kept for counties with 100,000 or more total population and 25,000 or more speakers of languages other than English and Spanish.</p>';
+		          }
+
+		          // hardcoding the indicies would probably be fine but just in case the columns returns in an unexpected order...
+		          var labelIndex = data[0].indexOf('LANLABEL');
+		          var populationIndex = data[0].indexOf('EST');
+		          
+		          // add each LAN7 result to the popup html
+		          var popupContent = '<p>';
+		          for(var i = 1; i < data.length; i++){
+		            popupContent += '<b>'+data[i][labelIndex]+':</b> '+data[i][populationIndex]+'<br>';
+		          }
+		          popupContent += '</p>';
+		          
+		          // push to the popup
+		          return popupContent;
+		        })
+		    }
 
         // initialize map
         this.map = new EsriMap({
@@ -56,6 +92,11 @@ export class EsriMapComponent implements AfterViewInit {
 		        states = new EsriGeoJSONLayer({
 						   url: "../../assets/geo/us_states_5m.json",
 						   opacity: .5,
+						   popupEnabled: true,
+						   popupTemplate: new EsriPopupTemplate({
+						   	 title: '{NAME}',
+						   	 content: getApiData
+						   }),
 						   renderer: new EsriSimpleRenderer({
 			      		 symbol: new EsriSimpleFillSymbol({
 				      	   color: new EsriColor("#666666")
@@ -67,6 +108,11 @@ export class EsriMapComponent implements AfterViewInit {
 		        counties = new EsriGeoJSONLayer({
 						   url: "../../assets/geo/us_counties_5m.json",
 						   opacity: .7,
+						   popupEnabled: true,
+						   popupTemplate: new EsriPopupTemplate({
+						   	 title: '{NAME}',
+						   	 content: getApiData
+						   }),
 						   renderer: new EsriSimpleRenderer({
 			      		 symbol: new EsriSimpleLineSymbol({
 				      	   color: new EsriColor("#800000")
